@@ -1,4 +1,4 @@
-# ميزان MIZAN — جالب صور NASA GIBS الحقيقية (real NASA imagery)
+﻿# ميزان MIZAN — جالب صور NASA GIBS الحقيقية (real NASA imagery)
 # صور أقمار حقيقية بلا مصادقة عبر WMS → web/public/nasa/
 # تشغيل:  powershell -File tools/fetch_nasa_imagery.ps1
 
