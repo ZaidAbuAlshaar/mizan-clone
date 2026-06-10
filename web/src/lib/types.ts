@@ -27,6 +27,8 @@ export interface FieldProps {
   expansion_rate: number;
   persistence_months: number;
   anti_phase_score: number;
+  /** مؤشر شذوذ AI (IsolationForest) 0..1 — مساند، لا يدخل في درجة P4 */
+  ml_anomaly?: number;
   score: number;
   score_breakdown: ScoreBreakdown;
   tier: Tier;
@@ -242,11 +244,32 @@ export interface ClimateData {
   is_demo: boolean;
 }
 
+/** مخزون المياه الجوفية GLDAS (CLSM GRACE-DA) — عبر Google Earth Engine */
+export interface GwsSeries {
+  label_ar: string;
+  label_en: string;
+  region_note_ar: string;
+  unit: string;
+  series: { month: string; gws_mm: number }[];
+  trend_mm_per_yr: number;
+  months: number;
+  source: string;
+  is_real: boolean;
+}
+
 export interface NasaManifest {
   provider: string;
   basemap: { jordan: string; layer: string; bbox: [number, number, number, number]; date: string };
-  time_machine: { years: Record<string, string>; layer: string; bbox: [number, number, number, number] };
+  time_machine: {
+    years: Record<string, string>;
+    layer: string;
+    bbox: [number, number, number, number];
+    /** ملصق المصدر للواجهة (مثل «Sentinel-2 · 20م») */
+    label?: string;
+  };
   ndvi: { "2016": string; "2024": string; layer: string };
   pivots: { disi: string; note_ar: string };
+  /** قصاصات قبل/بعد الحقيقية لكل حقل (من fetch_s2_timemachine.py) */
+  fields_thumbs?: { before_year: number; after_year: number; count: number };
   is_real: boolean;
 }

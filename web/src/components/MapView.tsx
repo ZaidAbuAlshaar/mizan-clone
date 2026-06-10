@@ -32,6 +32,10 @@ interface Props {
   /** تاريخ صور GIBS الحيّة (YYYY-MM-DD) — للسفر عبر الزمن */
   satelliteDate?: string;
   showFields?: boolean;
+  /** خريطة حرارة الاشتباه (وزنها درجة P4) */
+  heatmap?: boolean;
+  /** نبض إنذار على الحقول 🔴 */
+  pulse?: boolean;
 }
 
 const CARTO_TILES = [
@@ -57,12 +61,26 @@ function buildStyle(basemap: Basemap, satDate: string): maplibregl.StyleSpecific
       maxzoom: 9,
       attribution: "NASA EOSDIS GIBS · VIIRS/MODIS",
     },
+    // HLS Landsat 30م — حدّة ×8 عند التقريب (شفاف حيث لا swath → تبقى VIIRS تحته)
+    gibs_hls: {
+      type: "raster",
+      tiles: [
+        `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/HLS_L30_Nadir_BRDF_Adjusted_Reflectance/default/${satDate}/GoogleMapsCompatible_Level12/{z}/{y}/{x}.png`,
+      ],
+      tileSize: 256,
+      maxzoom: 12,
+      attribution: "NASA HLS L30 (30m)",
+    },
   };
   const layers: maplibregl.LayerSpecification[] = [
     { id: "bg", type: "background", paint: { "background-color": "#060B14" } },
   ];
   if (basemap === "satellite") {
     layers.push({ id: "gibs", type: "raster", source: "gibs", paint: { "raster-opacity": 1, "raster-fade-duration": 300 } });
+    layers.push({
+      id: "gibs-hls", type: "raster", source: "gibs_hls", minzoom: 8,
+      paint: { "raster-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0, 9, 1] as never, "raster-fade-duration": 300 },
+    });
     // طبقة تعتيم خفيفة لإبراز الـ overlays فوق الصورة
     layers.push({ id: "dim", type: "background", paint: { "background-color": "rgba(6,11,20,0.18)" } });
   } else {
@@ -85,6 +103,8 @@ export default function MapView({
   basemap = "dark",
   satelliteDate = "2024-08-12",
   showFields = true,
+  heatmap = false,
+  pulse = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MLMap | null>(null);
@@ -93,6 +113,9 @@ export default function MapView({
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const basemapRef = useRef<Basemap>(basemap);
   const satDateRef = useRef<string>(satelliteDate);
+  const heatmapRef = useRef(heatmap);
+  heatmapRef.current = heatmap;
+  const pulseTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { lang } = useLang();
 
   function addOverlayLayers(map: MLMap) {
@@ -120,6 +143,36 @@ export default function MapView({
     map.addLayer({ id: "exclusions-line", type: "line", source: "exclusions", paint: { "line-color": "#38BDF8", "line-width": 1.4, "line-dasharray": [2, 2] } });
     // ---- الحقول
     map.addSource("fields", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    // خريطة حرارة الاشتباه — وزنها درجة P4 (شدّة بصرية للكثافة عند الزوم البعيد)
+    map.addLayer({
+      id: "fields-heat", type: "heatmap", source: "fields", maxzoom: 12,
+      layout: { visibility: heatmapRef.current ? "visible" : "none" },
+      paint: {
+        "heatmap-weight": ["interpolate", ["linear"], ["get", "score"], 40, 0.15, 70, 0.6, 100, 1],
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 6, 0.7, 9, 1.6, 12, 2.6],
+        "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 6, 14, 9, 30, 12, 52],
+        "heatmap-color": [
+          "interpolate", ["linear"], ["heatmap-density"],
+          0, "rgba(13,30,50,0)",
+          0.25, "rgba(45,212,191,0.45)",
+          0.5, "rgba(233,185,73,0.6)",
+          0.75, "rgba(244,63,94,0.75)",
+          1, "rgba(255,75,100,0.95)",
+        ],
+        "heatmap-opacity": 0.85,
+      },
+    });
+    // نبض إنذار خلف نقاط 🔴 (يتنفّس عبر paint transitions)
+    map.addLayer({
+      id: "fields-pulse", type: "circle", source: "fields", maxzoom: 10,
+      filter: ["==", ["get", "tier"], "red"],
+      paint: {
+        "circle-color": "#F43F5E", "circle-opacity": 0.35, "circle-radius": 6,
+        "circle-blur": 0.9,
+        "circle-radius-transition": { duration: 900 } as never,
+        "circle-opacity-transition": { duration: 900 } as never,
+      },
+    });
     map.addLayer({
       id: "fields-fill", type: "fill", source: "fields", minzoom: 9,
       paint: { "fill-color": ["match", ["get", "tier"], "red", "#F43F5E", "orange", "#F59E0B", "#10B981"], "fill-opacity": 0.55 },
@@ -169,6 +222,17 @@ export default function MapView({
       syncData();
     });
 
+    // نبض الإنذار: تبديل بين حالتين كل 950مللي — الانتقالات تتولى النعومة
+    if (pulse) {
+      let phase = false;
+      pulseTimerRef.current = setInterval(() => {
+        if (!loadedRef.current || !map.getLayer("fields-pulse")) return;
+        phase = !phase;
+        map.setPaintProperty("fields-pulse", "circle-radius", phase ? 16 : 6);
+        map.setPaintProperty("fields-pulse", "circle-opacity", phase ? 0.05 : 0.35);
+      }, 950);
+    }
+
     const clickHandler = (e: maplibregl.MapLayerMouseEvent) => {
       const f = e.features?.[0];
       if (f && onFieldClick) onFieldClick(f.properties?.id as string);
@@ -196,6 +260,7 @@ export default function MapView({
     });
 
     return () => {
+      if (pulseTimerRef.current) clearInterval(pulseTimerRef.current);
       markersRef.current.forEach((m) => m.remove());
       map.remove();
       mapRef.current = null;
@@ -270,11 +335,27 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !loadedRef.current || !map.getLayer("fields-fill")) return;
     const filter = yearFilter != null ? (["<=", ["get", "first_seen_year"], yearFilter] as never) : null;
-    ["fields-fill", "fields-outline", "fields-points"].forEach((l) => {
+    ["fields-fill", "fields-outline", "fields-points", "fields-heat"].forEach((l) => {
       if (map.getLayer(l)) map.setFilter(l, filter);
     });
+    // طبقة النبض تحتفظ بشرط 🔴 مع فلتر السنة
+    if (map.getLayer("fields-pulse")) {
+      map.setFilter(
+        "fields-pulse",
+        yearFilter != null
+          ? (["all", ["==", ["get", "tier"], "red"], ["<=", ["get", "first_seen_year"], yearFilter]] as never)
+          : (["==", ["get", "tier"], "red"] as never),
+      );
+    }
   }
   useEffect(applyYearFilter, [yearFilter]);
+
+  // إظهار/إخفاء خريطة الحرارة
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current || !map.getLayer("fields-heat")) return;
+    map.setLayoutProperty("fields-heat", "visibility", heatmap ? "visible" : "none");
+  }, [heatmap, loaded]);
 
   useEffect(() => {
     const map = mapRef.current;

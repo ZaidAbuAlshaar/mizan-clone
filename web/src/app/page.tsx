@@ -1,6 +1,6 @@
 "use client";
 /** الشاشة 1 — لوحة القيادة (طراز Dark Mood): هيرو الحوض + خريطة قمر صناعي NASA حيّة + بلاطات المؤشرات */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import MapView, { Basemap } from "@/components/MapView";
@@ -26,7 +26,37 @@ export default function NationalMapPage() {
   const [impact, setImpact] = useState<ImpactData | null>(null);
   const [climate, setClimate] = useState<ClimateData | null>(null);
   const [basemap, setBasemap] = useState<Basemap>("satellite");
-  const [layers, setLayers] = useState({ fields: true, basins: true, validation: false });
+  const [layers, setLayers] = useState({ fields: true, basins: true, validation: false, heatmap: false });
+  // بث القمر الحي — آخر تمريرة VIIRS متاحة على GIBS (أمس الأول ضماناً للتوافر)
+  const [satLive, setSatLive] = useState(false);
+  const liveDate = useMemo(() => new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10), []);
+  const satDate = satLive ? liveDate : "2024-08-12";
+  // أنيميشن الزحف الأخضر — الحقول تظهر بسنة أول رصد
+  const [growthYear, setGrowthYear] = useState<number | null>(null);
+  const playRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playing = growthYear != null;
+
+  function toggleGrowth() {
+    if (playRef.current) {
+      clearInterval(playRef.current);
+      playRef.current = null;
+      setGrowthYear(null);
+      return;
+    }
+    let y = 2016;
+    setGrowthYear(y);
+    playRef.current = setInterval(() => {
+      y += 1;
+      if (y > 2026) {
+        if (playRef.current) clearInterval(playRef.current);
+        playRef.current = null;
+        setTimeout(() => setGrowthYear(null), 1600);
+        return;
+      }
+      setGrowthYear(y);
+    }, 750);
+  }
+  useEffect(() => () => { if (playRef.current) clearInterval(playRef.current); }, []);
 
   useEffect(() => {
     getFields().then(setFields).catch(console.error);
@@ -88,8 +118,33 @@ export default function NationalMapPage() {
             className="h-[58vh] min-h-[420px] xl:h-full xl:min-h-0"
             showBasinLabels
             basemap={basemap}
+            satelliteDate={satDate}
             showFields={layers.fields}
+            heatmap={layers.heatmap}
+            yearFilter={growthYear}
           />
+          {/* عدّاد سنة الزحف الأخضر أثناء التشغيل */}
+          {playing && (
+            <div className="pointer-events-none absolute left-1/2 top-6 z-10 -translate-x-1/2 text-center">
+              <div className="kpi-number text-6xl font-extrabold text-gold glow-text" dir="ltr">{growthYear}</div>
+              <div className="mt-1 rounded-pill bg-space-950/80 px-3 py-1 text-[11px] text-ink-dim backdrop-blur">
+                {t("growth_caption")} · <b className="text-flag-red num">
+                  {fields ? fields.features.filter((f) => f.properties.first_seen_year <= (growthYear ?? 2026)).length : 0}
+                </b> {t("growth_fields_label")}
+              </div>
+            </div>
+          )}
+          {/* زر الزحف الأخضر */}
+          <button
+            onClick={toggleGrowth}
+            className={`absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-pill border px-4 py-2 text-xs font-bold backdrop-blur transition-colors ${
+              playing
+                ? "border-flag-red/50 bg-flag-red/15 text-flag-red"
+                : "border-teal-glow/40 bg-space-950/80 text-teal-glow hover:bg-teal-glow/10"
+            }`}
+          >
+            {playing ? t("growth_stop") : t("growth_play")}
+          </button>
           {/* شريحة الحالة (مثل بطاقة الطقس الرئيسية) */}
           <Link
             href="/basin/azraq"
@@ -108,11 +163,19 @@ export default function NationalMapPage() {
           </Link>
           {/* لوحة الطبقات (أسفل) */}
           <div className="absolute bottom-4 end-4 z-10 w-[230px]">
-            <LayerPanel basemap={basemap} onBasemap={setBasemap} layers={layers} onToggle={(k) => setLayers((s) => ({ ...s, [k]: !s[k] }))} />
+            <LayerPanel
+              basemap={basemap} onBasemap={setBasemap}
+              layers={layers} onToggle={(k) => setLayers((s) => ({ ...s, [k]: !s[k] }))}
+              live={satLive} onLive={setSatLive}
+            />
           </div>
           {basemap === "satellite" && (
-            <span className="absolute end-4 top-4 z-10 inline-flex items-center gap-1 rounded-pill border border-flag-green/40 bg-space-950/80 px-3 py-1.5 text-[11px] font-bold text-flag-green backdrop-blur">
-              🛰 {t("nasa_live_badge")}
+            <span className={`absolute end-4 top-4 z-10 inline-flex items-center gap-1 rounded-pill border px-3 py-1.5 text-[11px] font-bold backdrop-blur ${
+              satLive ? "border-flag-red/50 bg-space-950/80 text-flag-red" : "border-flag-green/40 bg-space-950/80 text-flag-green"
+            }`}>
+              {satLive
+                ? <>🔴 {t("live_sat_on")} · VIIRS <span dir="ltr" className="num">{liveDate}</span></>
+                : <>🛰 {t("nasa_live_badge")}</>}
             </span>
           )}
         </div>

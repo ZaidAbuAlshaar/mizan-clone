@@ -1,0 +1,47 @@
+{
+ "model": "IsolationForest (scikit-learn)",
+ "n_estimators": 300,
+ "random_state": 42,
+ "features": [
+  "area_ha",
+  "expansion_rate",
+  "persistence_months",
+  "anti_phase_score",
+  "years_since_first_seen",
+  "ndvi_mean",
+  "ndvi_max",
+  "ndvi_summer_mean",
+  "ndvi_std"
+ ],
+ "n_fields": 141,
+ "role_ar": "مؤشر مساند — لا يدخل في درجة P4 (plan.md §371: anomaly scoring)",
+ "role_en": "Supporting indicator — does NOT affect the P4 score",
+ "top_anomalies": [
+  {
+   "id": "AZQ-0003",
+   "ml_anomaly": 1.0,
+   "score": 59
+  },
+  {
+   "id": "AZQ-0093",
+   "ml_anomaly": 0.999,
+   "score": 70
+  },
+  {
+   "id": "AZQ-0002",
+   "ml_anomaly": 0.939,
+   "score": 84
+  },
+  {
+   "id": "AZQ-0018",
+   "ml_anomaly": 0.908,
+   "score": 77
+  },
+  {
+   "id": "AZQ-0001",
+   "ml_anomaly": 0.868,
+   "score": 89
+  }
+ ],
+ "is_real": true
+}

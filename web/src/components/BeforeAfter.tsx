@@ -1,9 +1,12 @@
 "use client";
 /**
- * سحّاب قبل/بعد — تصوّر توضيحي موسوم (في النسخة الحقيقية: PNG من getThumbURL — قرار المراجعة #7)
+ * سحّاب قبل/بعد — صور أقمار حقيقية لكل حقل (Sentinel-2 10م «بعد» + Landsat 2016 «قبل»)
+ * مولّدة من tools/fetch_s2_timemachine.py → /nasa/fields/{id}_before|after.jpg
+ * عند غياب القصاصات: fallback على التصوّر التوضيحي الموسوم (قرار المراجعة #7 محقق)
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLang } from "@/lib/i18n";
+import { getNasa } from "@/lib/api";
 import type { FieldProps } from "@/lib/types";
 
 function DesertScene({ green, pivot, seed }: { green: boolean; pivot: boolean; seed: number }) {
@@ -65,21 +68,47 @@ function DesertScene({ green, pivot, seed }: { green: boolean; pivot: boolean; s
 export default function BeforeAfter({ field }: { field: FieldProps }) {
   const { t } = useLang();
   const [pos, setPos] = useState(50);
+  const [realOk, setRealOk] = useState(true);          // تنقلب false عند فشل تحميل القصاصة
+  const [years, setYears] = useState<{ before: number; after: number }>({ before: 2016, after: 2025 });
   const seed = parseInt(field.id.replace(/\D/g, ""), 10) || 1;
   const pivot = seed % 3 === 0;
   const beforeYear = Math.max(2016, field.first_seen_year - 1);
+  const beforeSrc = `/nasa/fields/${field.id}_before.jpg`;
+  const afterSrc = `/nasa/fields/${field.id}_after.jpg`;
+
+  useEffect(() => {
+    getNasa().then((n) => {
+      if (n?.fields_thumbs) setYears({ before: n.fields_thumbs.before_year, after: n.fields_thumbs.after_year });
+    }).catch(() => {});   // غياب القصاصات يحسمه onError → fallback توضيحي
+  }, []);
 
   return (
     <div>
       <div className="relative h-44 w-full overflow-hidden rounded-xl border border-space-700" dir="ltr">
-        {/* بعد (كامل) */}
-        <div className="absolute inset-0">
-          <DesertScene green pivot={pivot} seed={seed} />
-        </div>
-        {/* قبل (مقصوص بالموضع) */}
-        <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-          <DesertScene green={false} pivot={pivot} seed={seed} />
-        </div>
+        {realOk ? (
+          <>
+            {/* بعد (كامل) — Sentinel-2 حقيقي */}
+            <img src={afterSrc} alt={`${field.id} ${years.after}`} draggable={false}
+                 className="absolute inset-0 h-full w-full object-cover"
+                 onError={() => setRealOk(false)} />
+            {/* قبل (مقصوص بالموضع) — Landsat 2016 حقيقي */}
+            <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+              <img src={beforeSrc} alt={`${field.id} ${years.before}`} draggable={false}
+                   className="h-full w-full object-cover"
+                   onError={() => setRealOk(false)} />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* fallback توضيحي موسوم */}
+            <div className="absolute inset-0">
+              <DesertScene green pivot={pivot} seed={seed} />
+            </div>
+            <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+              <DesertScene green={false} pivot={pivot} seed={seed} />
+            </div>
+          </>
+        )}
         {/* مقبض */}
         <div className="absolute bottom-0 top-0 w-0.5 bg-teal-glow shadow-glow" style={{ left: `${pos}%` }}>
           <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-teal-glow bg-space-950 p-1 text-[9px] text-teal-glow">
@@ -87,14 +116,20 @@ export default function BeforeAfter({ field }: { field: FieldProps }) {
           </div>
         </div>
         <span className="absolute left-2 top-2 rounded bg-space-950/80 px-1.5 py-0.5 text-[10px] text-ink-dim">
-          {beforeYear}
+          {realOk ? years.before : beforeYear}
         </span>
         <span className="absolute right-2 top-2 rounded bg-space-950/80 px-1.5 py-0.5 text-[10px] text-teal-glow">
-          2026
+          {realOk ? years.after : 2026}
         </span>
-        <span className="absolute bottom-2 right-2 rounded bg-space-950/80 px-1.5 py-0.5 text-[10px] text-flag-orange">
-          {t("illustrative")} · demo
-        </span>
+        {realOk ? (
+          <span className="absolute bottom-2 right-2 rounded border border-flag-green/40 bg-flag-green/10 px-1.5 py-0.5 text-[10px] font-bold text-flag-green">
+            {t("real_s2_thumb")}
+          </span>
+        ) : (
+          <span className="absolute bottom-2 right-2 rounded bg-space-950/80 px-1.5 py-0.5 text-[10px] text-flag-orange">
+            {t("illustrative")} · demo
+          </span>
+        )}
       </div>
       <input
         type="range"

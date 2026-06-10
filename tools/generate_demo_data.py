@@ -584,8 +584,12 @@ def gen_climate():
 
 
 def gen_nasa_manifest():
-    """بيان صور NASA GIBS الحقيقية المستخدمة في الواجهة (خلفية + آلة الزمن)."""
-    return {
+    """بيان صور NASA الحقيقية المستخدمة في الواجهة (خلفية + آلة الزمن).
+
+    عند وجود web/public/nasa/tm_meta.json (مخرجات fetch_s2_timemachine.py) تُستخدم
+    صور Sentinel-2/Landsat الحادّة (10–30م) بدل MODIS (250م) — ترقية الدقة ×12.
+    """
+    manifest = {
         "provider": "NASA GIBS (Global Imagery Browse Services) — صور حقيقية بلا مصادقة",
         "basemap": {
             "jordan": "/nasa/jordan_truecolor.jpg",
@@ -602,6 +606,7 @@ def gen_nasa_manifest():
                 "2024": "/nasa/tm_azraq_2024.jpg",
             },
             "layer": "MODIS_Terra_CorrectedReflectance_TrueColor",
+            "label": "NASA GIBS · MODIS 250م",
             "bbox": [36.50, 31.55, 37.30, 32.20],
         },
         "ndvi": {"2016": "/nasa/ndvi_azraq_2016.png", "2024": "/nasa/ndvi_azraq_2024.png",
@@ -609,6 +614,23 @@ def gen_nasa_manifest():
         "pivots": {"disi": "/nasa/pivots_disi.jpg", "note_ar": "دوائر الري المحوري الحقيقية في صحراء الجنوب الشرقي"},
         "is_real": True,
     }
+    tm_meta_path = os.path.join(HERE, "..", "web", "public", "nasa", "tm_meta.json")
+    if os.path.exists(tm_meta_path):
+        with open(tm_meta_path, encoding="utf-8") as f:
+            tm = json.load(f)
+        if tm.get("years"):
+            manifest["time_machine"]["years"] = {y: v["file"] for y, v in sorted(tm["years"].items())}
+            res = tm.get("resolution_m", {}).get("theater", 20)
+            manifest["time_machine"]["layer"] = "Sentinel-2 L2A (Planetary Computer) + Landsat 8 (2016)"
+            manifest["time_machine"]["label"] = f"Sentinel-2 · {res}م"
+            manifest["time_machine"]["bbox"] = tm.get("bbox", manifest["time_machine"]["bbox"])
+        if tm.get("fields_thumbs") and tm.get("thumbs"):
+            manifest["fields_thumbs"] = {
+                "before_year": tm["thumbs"]["before_year"],
+                "after_year": tm["thumbs"]["after_year"],
+                "count": tm["thumbs"]["count"],
+            }
+    return manifest
 
 
 def gen_exclusions():
@@ -722,6 +744,10 @@ def main():
     }
     if climate:
         out["climate.json"] = climate
+    gws = load_real_json("gws_series.json")     # GLDAS عبر Google Earth Engine (إن وُجد)
+    if gws:
+        out["gws_series.json"] = gws
+        print(f"  ✅ GLDAS GWS حقيقي (Earth Engine): {gws.get('months', '?')} شهراً")
     for name, obj in out.items():
         path = os.path.join(OUT_DIR, name)
         with open(path, "w", encoding="utf-8") as f:

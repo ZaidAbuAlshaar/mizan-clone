@@ -18,6 +18,8 @@
 | **GRACE TWS + التنبّؤ** | JPL GRACE/GRACE-FO mascon RL06.3v04 — **254 شهراً** (2002→2026، اتجاه −0.95سم/سنة، backtest MAE 1.01سم) | NASA PO.DAAC (Earthdata token) |
 | **المناخ + النفي المطري** | NASA POWER — أمطار/تبخّر/حرارة **276 شهراً** (متوسط مطر الصيف 2.8مم) | NASA POWER (بلا مفتاح) |
 | **خلفية الخريطة + آلة الزمن** | VIIRS/MODIS TrueColor + NDVI | NASA GIBS (بلا مفتاح) |
+| **آلة الزمن الحادّة (20م)** | Sentinel-2 L2A صيفي 2018→2025 + Landsat 8 لسنة 2016 — مسرح المقارنة + قصاصات قبل/بعد لكل حقل | Microsoft Planetary Computer (بلا مفتاح) |
+| **مخزون GLDAS الجوفي** | GLDAS-2.2 CLSM (مدمج بجاذبية GRACE) — **278 شهراً**، اتجاه −1.1مم/سنة: توكيد مستقل ثانٍ للنزيف | **Google Earth Engine** (مشروع `mizan-earth-engine`) |
 
 الجزء الوحيد التوضيحي (بصراحة): **عتبة منسوب الآبار الحرجة** — استقراء من أرقام MWI المنشورة (−20م/−1م/سنة)، يحمل شارة «توضيحي».
 
@@ -83,7 +85,16 @@ $env:MIZAN_ED_TOKEN = "<your-earthdata-token>"     # PowerShell
 # export MIZAN_ED_TOKEN="<your-earthdata-token>"   # bash
 python tools/fetch_grace.py                        # → data/real/tws_series.json + forecast.json
 
-# 4) دمج كل ذلك في data/demo/ ونسخه للواجهة
+# 4) آلة الزمن عالية الدقة — Sentinel-2 ‏20م + Landsat 2016 (بلا مفتاح)
+python tools/fetch_s2_timemachine.py               # → web/public/nasa/tm_azraq_*.jpg
+                                                   #   + قصاصات قبل/بعد حقيقية لكل حقل (nasa/fields/)
+
+# 5) مخزون GLDAS الجوفي عبر Google Earth Engine — توكيد مستقل ثانٍ
+#    يحتاج: earthengine authenticate + مشروع Cloud (EE_PROJECT)
+$env:EE_PROJECT = "mizan-earth-engine"
+python geo/fetch_gldas_gws.py                      # → data/real/gws_series.json
+
+# 6) دمج كل ذلك في data/demo/ ونسخه للواجهة
 python tools/generate_demo_data.py
 ```
 

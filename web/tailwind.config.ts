@@ -58,6 +58,7 @@ const config: Config = {
       animation: {
         "pulse-dot": "pulseDot 1.6s ease-in-out infinite",
         "fade-up": "fadeUp 0.5s ease-out",
+        "fade-in": "fadeIn 0.7s ease-out",
         scan: "scan 6s linear infinite",
       },
       keyframes: {
@@ -66,6 +67,7 @@ const config: Config = {
           "50%": { opacity: "0.45", transform: "scale(1.6)" },
         },
         fadeUp: { from: { opacity: "0", transform: "translateY(10px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+        fadeIn: { from: { opacity: "0" }, to: { opacity: "1" } },
         scan: { "0%": { transform: "translateY(-100%)" }, "100%": { transform: "translateY(100%)" } },
       },
     },

@@ -119,7 +119,7 @@ export default function EvidencePanel({
 
       <section className="panel p-3">
         <h3 className="mb-2 text-sm font-bold text-teal-glow">{t("score_components")}</h3>
-        <ScoreBreakdown breakdown={field.score_breakdown} score={field.score} />
+        <ScoreBreakdown breakdown={field.score_breakdown} score={field.score} mlAnomaly={field.ml_anomaly} />
       </section>
 
       <section>

@@ -11,7 +11,7 @@ const MAX: Record<keyof SB, number> = {
   expansion: 12.5,
 };
 
-export default function ScoreBreakdown({ breakdown, score }: { breakdown: SB; score: number }) {
+export default function ScoreBreakdown({ breakdown, score, mlAnomaly }: { breakdown: SB; score: number; mlAnomaly?: number }) {
   const { t } = useLang();
   const rows: { key: keyof SB; label: string }[] = [
     { key: "inside_protected_basin", label: t("sc_inside") },
@@ -48,6 +48,17 @@ export default function ScoreBreakdown({ breakdown, score }: { breakdown: SB; sc
           {score}<span className="text-sm text-ink-mute">/100</span>
         </span>
       </div>
+      {/* مؤشر الشذوذ AI — مساند حصراً، لا يدخل في الدرجة (plan.md §371: anomaly scoring) */}
+      {mlAnomaly != null && (
+        <div className="flex items-center gap-2 rounded-lg border border-cyanline/25 bg-cyanline/5 px-2 py-1.5 text-xs">
+          <span className="shrink-0 text-ink-dim">🤖 {t("sc_ml_anomaly")}</span>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-space-700">
+            <div className="h-full rounded-full bg-cyanline" style={{ width: `${mlAnomaly * 100}%`, opacity: 0.8 }} />
+          </div>
+          <span className="num shrink-0 text-cyanline">{mlAnomaly.toFixed(2)}</span>
+          <span className="shrink-0 text-[9px] text-ink-mute">{t("sc_ml_supporting")}</span>
+        </div>
+      )}
     </div>
   );
 }

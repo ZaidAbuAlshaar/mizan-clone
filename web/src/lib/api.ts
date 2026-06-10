@@ -6,7 +6,7 @@
  */
 import type {
   AlertItem, BasinsFC, ClimateData, FieldFeature, FieldsFC, FieldStatus, Forecast,
-  ImpactData, LedgerData, MetaData, NasaManifest, TimeMachineData, TwsSeries, ValidationData,
+  GwsSeries, ImpactData, LedgerData, MetaData, NasaManifest, TimeMachineData, TwsSeries, ValidationData,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -198,6 +198,15 @@ export async function getClimate(): Promise<ClimateData | null> {
 export async function getNasa(): Promise<NasaManifest | null> {
   try {
     return (await tryApi<NasaManifest>("/nasa")) ?? (await staticJson<NasaManifest>("nasa.json"));
+  } catch {
+    return null;
+  }
+}
+
+/** مخزون GLDAS الجوفي (Google Earth Engine) — ملف ساكن من geo/fetch_gldas_gws.py */
+export async function getGws(): Promise<GwsSeries | null> {
+  try {
+    return await staticJson<GwsSeries>("gws_series.json");
   } catch {
     return null;
   }

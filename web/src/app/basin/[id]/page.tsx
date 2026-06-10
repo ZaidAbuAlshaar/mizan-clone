@@ -2,6 +2,9 @@
 /** الشاشة 2 — تفاصيل الحوض: منحنى GRACE الإقليمي + العتبة الحرجة على مناسيب الآبار + آلة الزمن + دفتر الميزان */
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import {
+  Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from "recharts";
 import MapView from "@/components/MapView";
 import GraceChart from "@/components/GraceChart";
 import WellLevelChart from "@/components/WellLevelChart";
@@ -11,10 +14,10 @@ import TimeMachine from "@/components/TimeMachine";
 import LedgerScales from "@/components/LedgerScales";
 import { DemoBadge, IllustrativeBadge, RegionalBadge } from "@/components/Badges";
 import {
-  getBasins, getClimate, getExclusions, getFields, getForecast, getLedger, getTimeMachine, getTws,
+  getBasins, getClimate, getExclusions, getFields, getForecast, getGws, getLedger, getTimeMachine, getTws,
 } from "@/lib/api";
 import type {
-  BasinsFC, ClimateData, FieldsFC, Forecast, LedgerData, TimeMachineData, TwsSeries,
+  BasinsFC, ClimateData, FieldsFC, Forecast, GwsSeries, LedgerData, TimeMachineData, TwsSeries,
 } from "@/lib/types";
 import { useLang } from "@/lib/i18n";
 import { fmt } from "@/lib/format";
@@ -33,9 +36,14 @@ export default function BasinPage() {
   const [exclusions, setExclusions] = useState<GeoJSON.FeatureCollection | null>(null);
   const [tm, setTm] = useState<TimeMachineData | null>(null);
   const [climate, setClimate] = useState<ClimateData | null>(null);
+  const [gws, setGws] = useState<GwsSeries | null>(null);
   const [year, setYear] = useState(2026);
+  // خلفية القمر تتبع سنة آلة الزمن — 2026 = آخر تمريرة VIIRS حية
+  const liveDate = useMemo(() => new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10), []);
+  const satDate = year >= 2026 ? liveDate : `${year}-08-12`;
 
   useEffect(() => {
+    getGws().then(setGws).catch(() => {});
     getTws().then(setTws).catch(console.error);
     getForecast(basinId).then(setForecast).catch(console.error);
     getLedger(basinId).then(setLedger).catch(() => {});
@@ -112,6 +120,55 @@ export default function BasinPage() {
             )}
           </section>
 
+          {/* توكيد مستقل ثانٍ: مخزون GLDAS الجوفي عبر Google Earth Engine */}
+          {gws && gws.series.length > 0 && (
+            <section className="panel p-4">
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-head text-base font-extrabold text-teal-glow">
+                  💧 {lang === "ar" ? gws.label_ar : gws.label_en}
+                </h2>
+                <div className="flex gap-2">
+                  <RegionalBadge />
+                  <span className="inline-flex items-center gap-1 rounded-full border border-flag-green/50 bg-flag-green/10 px-2 py-0.5 text-[10px] font-bold text-flag-green">
+                    <span className="h-1.5 w-1.5 rounded-full bg-flag-green" />
+                    {lang === "ar" ? "حقيقي · Google Earth Engine" : "Real · Google Earth Engine"}
+                  </span>
+                </div>
+              </div>
+              <p className="mb-2 text-[11px] text-ink-mute">
+                {lang === "ar"
+                  ? `توكيد مستقل عن GRACE: نموذج أرضي مدمج بالجاذبية · ${gws.months} شهراً · اتجاه ${gws.trend_mm_per_yr} مم/سنة`
+                  : `Independent of GRACE: land-surface model w/ gravity DA · ${gws.months} months · trend ${gws.trend_mm_per_yr} mm/yr`}
+              </p>
+              <div dir="ltr" className="h-36 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={gws.series} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
+                    <defs>
+                      <linearGradient id="gwsFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2DD4BF" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#2DD4BF" stopOpacity={0.03} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="#272727" strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="month" tick={{ fill: "#5E5E5E", fontSize: 9 }} axisLine={false} tickLine={false}
+                      ticks={gws.series.filter((p) => p.month.endsWith("-01") && Number(p.month.slice(0, 4)) % 4 === 3).map((p) => p.month)}
+                      tickFormatter={(m: string) => m.slice(0, 4)}
+                    />
+                    <YAxis tick={{ fill: "#5E5E5E", fontSize: 9 }} axisLine={false} tickLine={false} domain={["auto", "auto"]} />
+                    <Tooltip
+                      contentStyle={{ background: "#161616", border: "1px solid #272727", borderRadius: 12, fontSize: 12 }}
+                      labelStyle={{ color: "#B9B9B9" }}
+                      formatter={(v: number) => [`${v} mm`, "GWS"]}
+                    />
+                    <Area type="monotone" dataKey="gws_mm" stroke="#2DD4BF" strokeWidth={1.6} fill="url(#gwsFill)" dot={false} animationDuration={900} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="mt-1 text-[10px] text-ink-mute" dir="ltr">{gws.source}</p>
+            </section>
+          )}
+
           <section className="panel p-4">
             <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-head text-lg font-extrabold text-flag-orange">{t("well_level_title")}</h2>
@@ -138,11 +195,20 @@ export default function BasinPage() {
               onFieldClick={(id) => router.push(`/queue?focus=${id}`)}
               className="h-[430px]"
               basemap="satellite"
+              satelliteDate={satDate}
             />
             <div className="absolute start-3 top-3 z-10">
               <DemoBadge />
             </div>
+            <span className={`absolute end-3 top-3 z-10 inline-flex items-center gap-1 rounded-pill border px-2.5 py-1 text-[10px] font-bold backdrop-blur ${
+              year >= 2026 ? "border-flag-red/50 bg-space-950/80 text-flag-red" : "border-cyanline/40 bg-space-950/80 text-cyanline"
+            }`}>
+              {year >= 2026
+                ? <>🔴 {t("live_sat_on")} · <span dir="ltr" className="num">{liveDate}</span></>
+                : <>🛰 VIIRS <span dir="ltr" className="num">{year}-08</span></>}
+            </span>
           </div>
+          <p className="px-1 text-[10px] text-ink-mute">🛰 {t("basemap_follows_year")}</p>
           {tm && <TimeMachine data={tm} year={year} onYearChange={setYear} />}
           <p className="px-1 text-[11px] leading-relaxed text-ink-mute">{t("time_machine_note")}</p>
         </div>
