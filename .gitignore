@@ -2,6 +2,10 @@
 node_modules/
 .next/
 out/
+*.tsbuildinfo
+
+# Claude harness
+.claude/scheduled_tasks.lock
 
 # Python
 __pycache__/
