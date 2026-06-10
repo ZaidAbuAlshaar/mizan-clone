@@ -1,0 +1,18 @@
+{
+  "engine": "real",
+  "source": "Sentinel-2 L2A via Microsoft Planetary Computer (keyless) + NASA POWER rainfall",
+  "method": "NDVI median (Jul–Aug) ≥ 0.35, wetland-excluded; annual composites 2018–2024 for first-seen; monthly 2024 for irrigation fingerprint",
+  "resolution_m": 50,
+  "n_fields": 141,
+  "red": 103,
+  "orange": 38,
+  "total_ha": 783.3,
+  "total_m3_yr_mid": 5874748,
+  "years": [
+    2018,
+    2020,
+    2022,
+    2024
+  ],
+  "is_real": true
+}

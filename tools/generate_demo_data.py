@@ -47,6 +47,18 @@ def load_real_climate():
 
 REAL = load_real_climate()
 
+
+def load_real_fields():
+    """يحمّل fields.geojson الحقيقي (مخرجات detect_real_fields.py على Sentinel-2) إن وُجد."""
+    path = os.path.join(REAL_DIR, "fields.geojson")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        fc = json.load(f)
+    if fc.get("features"):
+        return fc
+    return None
+
 # ---------------------------------------------------------------- AOI الأزرق
 BBOX = {"lon_min": 36.45, "lon_max": 37.30, "lat_min": 31.55, "lat_max": 32.25}
 
@@ -616,7 +628,14 @@ def gen_exclusions():
 # ---------------------------------------------------------------- main
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
-    fields = gen_fields()
+    real_fields = load_real_fields()
+    if real_fields:
+        fields = real_fields
+        fields_real = True
+        print(f"  ✅ حقول حقيقية من Sentinel-2: {len(fields['features'])} حقل (data/real/fields.geojson)")
+    else:
+        fields = gen_fields()
+        fields_real = False
     basins = gen_basins()
     tws = gen_tws()
     forecast = gen_forecast(tws)
@@ -636,19 +655,29 @@ def main():
         "is_demo": True,
     }
 
+    real_layers = []
+    if fields_real:
+        real_layers.append("Sentinel-2 L2A detection (NDVI irrigated-field engine via Planetary Computer)")
+    if REAL:
+        real_layers += ["NASA POWER climate (precip/ET/temp 2002–2024)",
+                        "NASA GIBS satellite imagery (VIIRS/MODIS basemap + time machine)"]
+    demo_layers = []
+    if not fields_real:
+        demo_layers.append("AI detection output (suspect field polygons — تحتاج Sentinel-2)")
+    demo_layers.append("GRACE TWS series (منحنى توضيحي على الاتجاه المنشور — السلسلة الكاملة تحتاج Earthdata)")
+
+    all_real = fields_real and REAL
     meta = {
-        "data_mode": "demo" if not REAL else "hybrid",
+        "data_mode": "real" if all_real else ("hybrid" if (REAL or fields_real) else "demo"),
         "generated_at": GENERATED_AT,
-        "generator_version": "2.0.0",
-        "real_layers": (["NASA POWER climate (precip/ET/temp 2002–2024)",
-                         "NASA GIBS satellite imagery (VIIRS/MODIS basemap + time machine)"]
-                        if REAL else []),
-        "demo_layers": ["AI detection output (suspect field polygons — تحتاج Sentinel-2 + GEE)",
-                        "GRACE TWS series (published trend)"],
-        "note_ar": ("طبقات NASA حقيقية (مناخ POWER + صور GIBS) + مخرجات كشف موسومة demo (الحقول تحتاج Sentinel-2/GEE)"
-                    if REAL else "بيانات تجريبية موسومة — تُستبدل بمخرجات pipeline GEE الحقيقية بلا تغيير في العقد"),
-        "note_en": ("Real NASA layers (POWER climate + GIBS imagery) + demo-labeled detection output (fields need Sentinel-2/GEE)"
-                    if REAL else "Labeled demo data — replaced by real GEE pipeline outputs with no contract change"),
+        "generator_version": "3.0.0",
+        "fields_source": "Sentinel-2 L2A (real)" if fields_real else "synthetic (demo)",
+        "real_layers": real_layers,
+        "demo_layers": demo_layers,
+        "note_ar": ("الكشف حقيقي من Sentinel-2 + مناخ NASA POWER + صور GIBS — منحنى GRACE توضيحي على الاتجاه المنشور"
+                    if all_real else "طبقات NASA حقيقية مع بعض المخرجات التوضيحية الموسومة"),
+        "note_en": ("Real Sentinel-2 detection + NASA POWER climate + GIBS imagery — GRACE curve illustrative on published trend"
+                    if all_real else "Real NASA layers with some labeled illustrative outputs"),
     }
 
     climate = gen_climate()

@@ -1,0 +1,13 @@
+# ميزان MIZAN — متطلبات أدوات البيانات الحقيقية (real-data tooling)
+# جلب بيانات NASA (POWER + GIBS) ومحرّك كشف Sentinel-2 عبر Planetary Computer — بلا مفاتيح.
+
+# محرّك الكشف الحقيقي (detect_real_fields.py)
+pystac-client>=0.9        # استعلام STAC
+planetary-computer>=1.0   # توقيع روابط Planetary Computer (بلا مفتاح)
+odc-stac>=0.3             # دمج مشاهد Sentinel-2 في شبكة موحّدة
+rasterio>=1.3            # قراءة COG + polygonize + rasterize
+shapely>=2.0             # هندسة المضلعات
+pyproj>=3.5             # تحويل UTM↔WGS84 + المساحة الجيوديسية
+numpy>=1.24
+
+# جلب بيانات NASA (fetch_nasa_data.py) — stdlib فقط (urllib)، لا متطلبات إضافية.

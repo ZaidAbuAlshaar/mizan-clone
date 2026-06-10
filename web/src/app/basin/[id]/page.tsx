@@ -9,7 +9,7 @@ import WaterBalanceChart from "@/components/WaterBalanceChart";
 import RainProof from "@/components/RainProof";
 import TimeMachine from "@/components/TimeMachine";
 import LedgerScales from "@/components/LedgerScales";
-import { DemoBadge, RegionalBadge } from "@/components/Badges";
+import { DemoBadge, IllustrativeBadge, RegionalBadge } from "@/components/Badges";
 import {
   getBasins, getClimate, getExclusions, getFields, getForecast, getLedger, getTimeMachine, getTws,
 } from "@/lib/api";
@@ -99,7 +99,7 @@ export default function BasinPage() {
               </h2>
               <div className="flex gap-2">
                 <RegionalBadge />
-                {tws?.is_demo && <DemoBadge small />}
+                <IllustrativeBadge small />
               </div>
             </div>
             <p className="mb-2 text-[11px] text-ink-mute">{t("grace_subtitle")}</p>
@@ -113,7 +113,7 @@ export default function BasinPage() {
           <section className="panel p-4">
             <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-head text-lg font-extrabold text-flag-orange">{t("well_level_title")}</h2>
-              {forecast?.is_demo && <DemoBadge small />}
+              <IllustrativeBadge small />
             </div>
             <p className="mb-2 text-[11px] text-ink-mute">{t("well_level_sub")}</p>
             {forecast ? (
@@ -135,6 +135,7 @@ export default function BasinPage() {
               bounds={[[36.3, 31.45], [37.45, 32.35]]}
               onFieldClick={(id) => router.push(`/queue?focus=${id}`)}
               className="h-[430px]"
+              basemap="satellite"
             />
             <div className="absolute start-3 top-3 z-10">
               <DemoBadge />

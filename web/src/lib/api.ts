@@ -34,7 +34,8 @@ async function tryApi<T>(path: string): Promise<T | null> {
 }
 
 async function staticJson<T>(file: string): Promise<T> {
-  const res = await fetch(`/data/${file}`, { cache: "force-cache" });
+  // no-cache: يُعيد التحقق دائماً حتى تظهر البيانات المحدَّثة (لوحة بيانات لا أصول ثابتة)
+  const res = await fetch(`/data/${file}`, { cache: "no-cache" });
   if (!res.ok) throw new Error(`static data missing: ${file}`);
   lastSource = "static";
   return (await res.json()) as T;
@@ -172,6 +173,13 @@ export async function getTimeMachine(): Promise<TimeMachineData> {
 
 export async function getMeta(): Promise<MetaData> {
   return (await tryApi<MetaData>("/meta")) ?? staticJson<MetaData>("meta.json");
+}
+
+/** meta مخزّنة (طلب واحد مشترك لكل الشارات) */
+let _metaCache: Promise<MetaData> | null = null;
+export function getMetaCached(): Promise<MetaData> {
+  if (!_metaCache) _metaCache = getMeta();
+  return _metaCache;
 }
 
 export async function getExclusions(): Promise<GeoJSON.FeatureCollection> {

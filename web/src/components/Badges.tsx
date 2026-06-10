@@ -1,18 +1,55 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useLang } from "@/lib/i18n";
+import { getMetaCached } from "@/lib/api";
 
-/** شارة «بيانات تجريبية · demo data» — إلزامية عند أي بيانات مولّدة (لا mock كحقيقي أبداً) */
+/**
+ * شارة مصدر البيانات — واعية بـ meta.data_mode:
+ *  real/hybrid → «بيانات حقيقية · Sentinel-2 + NASA» (خضراء)
+ *  demo        → «بيانات تجريبية · demo data» (برتقالية)
+ * لا mock كحقيقي أبداً — وعندما تصبح البيانات حقيقية لا نسمّيها demo زوراً.
+ */
 export function DemoBadge({ small = false }: { small?: boolean }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const [mode, setMode] = useState<string>("");
+  useEffect(() => {
+    getMetaCached().then((m) => setMode(m.data_mode)).catch(() => setMode("demo"));
+  }, []);
+
+  const real = mode === "real" || mode === "hybrid";
+  const label = real
+    ? (lang === "ar" ? "بيانات حقيقية · Sentinel-2 + NASA" : "Real data · Sentinel-2 + NASA")
+    : `${t("demo_badge")} · demo data`;
+  const tip = real
+    ? (lang === "ar"
+        ? "الحقول من Sentinel-2 الحقيقي · المناخ من NASA POWER · الصور من NASA GIBS. منحنى GRACE توضيحي على الاتجاه المنشور."
+        : "Fields from real Sentinel-2 · climate from NASA POWER · imagery from NASA GIBS. GRACE curve illustrative on published trend.")
+    : t("demo_tooltip");
+  const cls = real ? "border-flag-green/50 bg-flag-green/10 text-flag-green" : "border-flag-orange/50 bg-flag-orange/10 text-flag-orange";
+
   return (
     <span
-      title={t("demo_tooltip")}
-      className={`inline-flex items-center gap-1 rounded-full border border-flag-orange/50 bg-flag-orange/10 font-body text-flag-orange ${
-        small ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"
-      }`}
+      title={tip}
+      className={`inline-flex items-center gap-1 rounded-full border font-body ${cls} ${small ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"}`}
+    >
+      <span className={`inline-block h-1.5 w-1.5 rounded-full ${real ? "bg-flag-green" : "bg-flag-orange"}`} />
+      {label}
+    </span>
+  );
+}
+
+/** شارة «توضيحي» — للأجزاء المنمذجة على اتجاه منشور (منحنى GRACE/التنبّؤ) حتى لا تُعرض كبيانات حقيقية */
+export function IllustrativeBadge({ small = false }: { small?: boolean }) {
+  const { lang } = useLang();
+  return (
+    <span
+      title={lang === "ar"
+        ? "منحنى توضيحي مبني على الاتجاه المنشور (Rodell 2024 / JPL). السلسلة الكاملة تحتاج تسجيل NASA Earthdata."
+        : "Illustrative curve on the published trend (Rodell 2024 / JPL). Full series needs NASA Earthdata login."}
+      className={`inline-flex items-center gap-1 rounded-full border border-flag-orange/50 bg-flag-orange/10 font-body text-flag-orange ${small ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-xs"}`}
     >
       <span className="inline-block h-1.5 w-1.5 rounded-full bg-flag-orange" />
-      {t("demo_badge")} · demo data
+      {lang === "ar" ? "توضيحي" : "Illustrative"}
     </span>
   );
 }
