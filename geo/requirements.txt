@@ -1,0 +1,11 @@
+# ميزان MIZAN — geo/ requirements
+# التثبيت: pip install -r requirements.txt
+# ثم: earthengine authenticate  (TM-02 — أخطر blocker صامت، نفّذه اليوم)
+
+earthengine-api>=0.1.400     # كل سكربتات P1–P6 وexport_thumbs
+numpy>=1.24                  # p6_forecast (نموذج fallback + فترات الثقة)
+pandas>=2.0                  # p6_forecast (مسار Prophet) + تحليلات مساعدة
+
+# اختياري — النموذج الأساسي للتنبّؤ؛ عند غيابه يعمل fallback موثَّق تلقائياً
+# (اتجاه خطي + توافقيات سنوية بـ numpy):
+# prophet>=1.1
