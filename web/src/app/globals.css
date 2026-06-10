@@ -12,54 +12,67 @@ body {
 }
 
 body {
-  @apply bg-space-950 text-ink font-body antialiased;
-  /* نجوم خافتة + توهج سديمي — غرفة تحكم فضائية */
+  @apply bg-space-900 text-ink font-body antialiased;
+  /* توهج خافت جداً في الزوايا — مزاج أسود نقي */
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(45, 212, 191, 0.07), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 85% 110%, rgba(56, 189, 248, 0.05), transparent 60%),
-    radial-gradient(1.2px 1.2px at 20% 30%, rgba(230, 237, 247, 0.16), transparent 100%),
-    radial-gradient(1px 1px at 70% 15%, rgba(230, 237, 247, 0.12), transparent 100%),
-    radial-gradient(1.4px 1.4px at 40% 70%, rgba(230, 237, 247, 0.10), transparent 100%),
-    radial-gradient(1px 1px at 90% 60%, rgba(230, 237, 247, 0.13), transparent 100%),
-    radial-gradient(1px 1px at 10% 85%, rgba(230, 237, 247, 0.09), transparent 100%);
+    radial-gradient(60% 40% at 85% -5%, rgba(45, 212, 191, 0.05), transparent 60%),
+    radial-gradient(50% 35% at 5% 105%, rgba(233, 185, 73, 0.04), transparent 60%);
   background-attachment: fixed;
 }
 
-/* لوحة زجاجية */
+/* ===== البطاقات (Dark Mood) ===== */
 .panel {
-  @apply rounded-2xl border border-space-700 bg-space-900/80 shadow-panel backdrop-blur-md;
+  @apply rounded-card border border-space-600/40 bg-space-800 shadow-panel;
 }
-
 .panel-raised {
-  @apply rounded-2xl border border-space-600/60 bg-space-800/90 shadow-panel backdrop-blur-md;
+  @apply rounded-tile border border-space-600/30 bg-space-700 shadow-tile;
+}
+/* بلاطة داخلية (مثل بطاقات المؤشرات في المرجع) */
+.tile {
+  @apply rounded-tile bg-space-700 p-4;
 }
 
-/* أرقام KPI ضخمة عالية التباين */
+/* حبّة مستديرة (pill) — بحث/مرشّحات/مبدّلات */
+.pill {
+  @apply inline-flex items-center gap-2 rounded-pill border border-space-600/50 bg-space-800 px-4 py-2.5 text-sm text-ink-dim;
+}
+
+/* أرقام KPI ضخمة */
 .kpi-number {
   @apply font-head font-extrabold tracking-tight text-ink;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
-
 .num {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* شريط تمرير رفيع داكن */
+/* فاصل بتدرّج (مثل خطوط الشريط الجانبي في المرجع) */
+.rail-divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #4a4949 50%, transparent 100%);
+}
+
+/* عنصر الشريط الجانبي النشط — شريط تمييز متدرّج */
+.rail-item-active {
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.18) 0%, rgba(30, 30, 30, 0) 90%);
+}
+
+/* شريط تمرير رفيع */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b1422;
+  background: #0f0f0f;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1b2c44;
+  background: #363636;
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #27405f;
+  background: #4a4949;
 }
 
 /* خريطة MapLibre */
@@ -67,29 +80,38 @@ body {
   font-family: inherit !important;
 }
 .maplibregl-popup-content {
-  @apply rounded-xl border border-space-700 !bg-space-900 !p-3 text-ink shadow-panel;
+  @apply rounded-tile border border-space-600 !bg-space-800 !p-3 text-ink shadow-panel;
 }
 .maplibregl-popup-tip {
-  border-top-color: #0b1422 !important;
-  border-bottom-color: #0b1422 !important;
+  border-top-color: #1e1e1e !important;
+  border-bottom-color: #1e1e1e !important;
 }
 .maplibregl-ctrl-attrib {
-  background: rgba(6, 11, 20, 0.6) !important;
+  background: rgba(12, 12, 12, 0.6) !important;
 }
 .maplibregl-ctrl-attrib a {
-  color: #5c7191 !important;
+  color: #5e5e5e !important;
+}
+.maplibregl-ctrl-group {
+  background: #1e1e1e !important;
+  border: 1px solid #363636 !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+.maplibregl-ctrl-group button {
+  background: transparent !important;
 }
 
 /* سحّاب مخصص */
 input[type="range"].mizan-range {
-  @apply h-1.5 w-full cursor-pointer appearance-none rounded-full bg-space-700;
+  @apply h-1.5 w-full cursor-pointer appearance-none rounded-full bg-space-600;
 }
 input[type="range"].mizan-range::-webkit-slider-thumb {
-  @apply h-4 w-4 appearance-none rounded-full border-2 border-space-950 bg-teal-glow shadow-glow;
+  @apply h-4 w-4 appearance-none rounded-full border-2 border-space-900 bg-teal-glow shadow-glow;
   -webkit-appearance: none;
 }
 
-/* نقطة حمراء وامضة — تاريخ العتبة الحرجة */
+/* نقطة حمراء وامضة */
 .critical-dot {
   position: relative;
 }
@@ -102,12 +124,10 @@ input[type="range"].mizan-range::-webkit-slider-thumb {
   animation: pulseDot 1.6s ease-in-out infinite;
 }
 
-/* صفوف الجدول */
 .queue-row {
-  @apply cursor-pointer border-b border-space-700/60 transition-colors hover:bg-space-800/70;
+  @apply cursor-pointer border-b border-space-600/40 transition-colors hover:bg-space-700/60;
 }
 
-/* توهج عنوان */
 .glow-text {
-  text-shadow: 0 0 18px rgba(45, 212, 191, 0.35);
+  text-shadow: 0 0 22px rgba(255, 255, 255, 0.12);
 }
